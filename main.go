@@ -114,6 +114,36 @@ func getNewestIssue() catalog {
 	return issues[len(issues)-1]
 }
 
+// Example: getSpecificIssue("2024-04-17")
+func getSpecificIssue(date string) catalog {
+	t, err := time.Parse("2006-01-02", date)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	year := fmt.Sprintf("%d", t.Year())
+	month := fmt.Sprintf("%d", t.Month())
+
+	issues := getIssues(year, month)
+
+	publicationDate := t.Format(time.DateOnly)
+	fmt.Printf("Searching the issue from the following date: %s\n", publicationDate)
+
+	var specificIssue catalog
+	for _, issue := range issues {
+		if issue.PublicationDate == publicationDate {
+			specificIssue = issue
+			break
+		}
+	}
+
+	if specificIssue.Catalog == 0 {
+		log.Fatal("There was no issue published on this date!")
+	}
+
+	return specificIssue
+}
+
 func getIssues(year string, month string) []catalog {
 	endpoint := "http://device.e-pages.dk/content/desktop/available.php"
 
