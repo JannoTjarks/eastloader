@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-type issue struct {
+type catalog struct {
 	Customer        string `json:"customer"`
 	PublicationDate string `json:"publication_date"`
 	Title           string `json:"title"`
@@ -27,10 +27,10 @@ type issue struct {
 }
 
 type visiolinkContent struct {
-	Generated      string  `json:"generated"`
-	TeaserImageURL string  `json:"teaser_image_url"`
-	CatalogURL     string  `json:"catalog_url"`
-	Catalogs       []issue `json:"catalogs"`
+	Generated      string    `json:"generated"`
+	TeaserImageURL string    `json:"teaser_image_url"`
+	CatalogURL     string    `json:"catalog_url"`
+	Catalogs       []catalog `json:"catalogs"`
 }
 
 type tokenResponse struct {
@@ -105,7 +105,7 @@ func main() {
 	}
 }
 
-func getNewestIssue() issue {
+func getNewestIssue() catalog {
 	t := time.Now()
 	year := fmt.Sprintf("%d", t.Year())
 	month := fmt.Sprintf("%d", t.Month())
@@ -114,7 +114,7 @@ func getNewestIssue() issue {
 	return issues[len(issues)-1]
 }
 
-func getIssues(year string, month string) []issue {
+func getIssues(year string, month string) []catalog {
 	endpoint := "http://device.e-pages.dk/content/desktop/available.php"
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -273,7 +273,7 @@ func getIssueAccessKey(accessUrl string) (string, error) {
 	return accessKey, nil
 }
 
-func generateFileName(issue issue) string {
+func generateFileName(issue catalog) string {
 	return fmt.Sprintf("%s-%s.pdf", issue.Customer, issue.PublicationDate)
 }
 
