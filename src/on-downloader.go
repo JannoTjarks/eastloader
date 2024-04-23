@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-type catalog struct {
+type visiolinkCatalog struct {
 	Customer        string `json:"customer"`
 	PublicationDate string `json:"publication_date"`
 	Title           string `json:"title"`
@@ -27,13 +27,13 @@ type catalog struct {
 }
 
 type visiolinkContent struct {
-	Generated      string    `json:"generated"`
-	TeaserImageURL string    `json:"teaser_image_url"`
-	CatalogURL     string    `json:"catalog_url"`
-	Catalogs       []catalog `json:"catalogs"`
+	Generated      string             `json:"generated"`
+	TeaserImageURL string             `json:"teaser_image_url"`
+	CatalogURL     string             `json:"catalog_url"`
+	Catalogs       []visiolinkCatalog `json:"catalogs"`
 }
 
-type tokenResponse struct {
+type visiolinkTokenResponse struct {
 	AccessURL string `json:"access_url"`
 	Success   bool   `json:"success"`
 }
@@ -105,7 +105,7 @@ func main() {
 	}
 }
 
-func getNewestIssue() catalog {
+func getNewestIssue() visiolinkCatalog {
 	t := time.Now()
 	year := fmt.Sprintf("%d", t.Year())
 	month := fmt.Sprintf("%d", t.Month())
@@ -115,7 +115,7 @@ func getNewestIssue() catalog {
 }
 
 // Example: getSpecificIssue("2024-04-17")
-func getSpecificIssue(date string) catalog {
+func getSpecificIssue(date string) visiolinkCatalog {
 	t, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		log.Fatal(err)
@@ -129,7 +129,7 @@ func getSpecificIssue(date string) catalog {
 	publicationDate := t.Format(time.DateOnly)
 	fmt.Printf("Searching the issue from the following date: %s\n", publicationDate)
 
-	var specificIssue catalog
+	var specificIssue visiolinkCatalog
 	for _, issue := range issues {
 		if issue.PublicationDate == publicationDate {
 			specificIssue = issue
@@ -144,7 +144,7 @@ func getSpecificIssue(date string) catalog {
 	return specificIssue
 }
 
-func getIssues(year string, month string) []catalog {
+func getIssues(year string, month string) []visiolinkCatalog {
 	endpoint := "http://device.e-pages.dk/content/desktop/available.php"
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -258,7 +258,7 @@ func getIssueAccessUrl(secret string, newestIssueId int) (string, error) {
 	}
 
 	fmt.Println(string(body))
-	var accessUrl tokenResponse
+	var accessUrl visiolinkTokenResponse
 	err = json.Unmarshal(body, &accessUrl)
 	if err != nil {
 		log.Fatalln(err)
@@ -303,7 +303,7 @@ func getIssueAccessKey(accessUrl string) (string, error) {
 	return accessKey, nil
 }
 
-func generateFileName(issue catalog) string {
+func generateFileName(issue visiolinkCatalog) string {
 	return fmt.Sprintf("%s-%s.pdf", issue.Customer, issue.PublicationDate)
 }
 
