@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"jannotjarks/on-downloader/src/internal/visiolink"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
@@ -14,54 +15,21 @@ import (
 	"time"
 )
 
-type visiolinkCatalog struct {
-	Customer        string `json:"customer"`
-	PublicationDate string `json:"publication_date"`
-	Title           string `json:"title"`
-	Sections        []struct {
-		FrontPage int `json:"front_page"`
-	} `json:"sections"`
-	FolderID int `json:"folder_id"`
-	Catalog  int `json:"catalog"`
-	Pages    int `json:"pages"`
-}
-
-type visiolinkContent struct {
-	Generated      string             `json:"generated"`
-	TeaserImageURL string             `json:"teaser_image_url"`
-	CatalogURL     string             `json:"catalog_url"`
-	Catalogs       []visiolinkCatalog `json:"catalogs"`
-}
-
-type visiolinkTokenResponse struct {
-	AccessURL string `json:"access_url"`
-	Success   bool   `json:"success"`
-}
-
-type visiolinkPaper struct {
-	customer     string
-	domain       string
-	loginDomain  string
-	loginUrl     string
-	readerDomain string
-	catalogId    int16
-}
-
 type credentials struct {
 	username string
 	password string
 }
 
-var on visiolinkPaper
+var on visiolink.Paper
 var client *http.Client
 
 func main() {
-	on = visiolinkPaper{
-		catalogId:    12968,
-		customer:     "ostfriesischenachrichten",
-		domain:       "epaper.on-online.de",
-		loginDomain:  "www.on-online.de",
-		readerDomain: "reader.on-online.de",
+	on = visiolink.Paper{
+		CatalogId:    12968,
+		Customer:     "ostfriesischenachrichten",
+		Domain:       "epaper.on-online.de",
+		LoginDomain:  "www.on-online.de",
+		ReaderDomain: "reader.on-online.de",
 	}
 
 	creds := credentials{
@@ -105,7 +73,7 @@ func main() {
 	}
 }
 
-func getNewestIssue() visiolinkCatalog {
+func getNewestIssue() visiolink.Catalog {
 	t := time.Now()
 	year := fmt.Sprintf("%d", t.Year())
 	month := fmt.Sprintf("%d", t.Month())
@@ -115,7 +83,7 @@ func getNewestIssue() visiolinkCatalog {
 }
 
 // Example: getSpecificIssue("2024-04-17")
-func getSpecificIssue(date string) visiolinkCatalog {
+func getSpecificIssue(date string) visiolink.Catalog {
 	t, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		log.Fatal(err)
@@ -129,7 +97,7 @@ func getSpecificIssue(date string) visiolinkCatalog {
 	publicationDate := t.Format(time.DateOnly)
 	fmt.Printf("Searching the issue from the following date: %s\n", publicationDate)
 
-	var specificIssue visiolinkCatalog
+	var specificIssue visiolink.Catalog
 	for _, issue := range issues {
 		if issue.PublicationDate == publicationDate {
 			specificIssue = issue
@@ -144,7 +112,7 @@ func getSpecificIssue(date string) visiolinkCatalog {
 	return specificIssue
 }
 
-func getIssues(year string, month string) []visiolinkCatalog {
+func getIssues(year string, month string) []visiolink.Catalog {
 	endpoint := "http://device.e-pages.dk/content/desktop/available.php"
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -153,8 +121,8 @@ func getIssues(year string, month string) []visiolinkCatalog {
 	}
 
 	q := req.URL.Query()
-	q.Add("customer", on.customer)
-	q.Add("folder_id", fmt.Sprintf("%d", on.catalogId))
+	q.Add("customer", on.Customer)
+	q.Add("folder_id", fmt.Sprintf("%d", on.CatalogId))
 	q.Add("year", year)
 	q.Add("month", month)
 	req.URL.RawQuery = q.Encode()
@@ -174,7 +142,7 @@ func getIssues(year string, month string) []visiolinkCatalog {
 	}
 
 	fmt.Println(string(body))
-	var issues visiolinkContent
+	var issues visiolink.Content
 	err = json.Unmarshal(body, &issues)
 	if err != nil {
 		log.Fatalln(err)
@@ -184,9 +152,9 @@ func getIssues(year string, month string) []visiolinkCatalog {
 }
 
 func getLoginUrl(creds credentials) (string, error) {
-	endpoint := fmt.Sprintf("https://%s/benutzer/loginVisiolink", on.loginDomain)
+	endpoint := fmt.Sprintf("https://%s/benutzer/loginVisiolink", on.LoginDomain)
 
-	redirectUrl := fmt.Sprintf("https://%s/titles/%s/%d/?token=[OneTimeToken]", on.domain, on.customer, on.catalogId)
+	redirectUrl := fmt.Sprintf("https://%s/titles/%s/%d/?token=[OneTimeToken]", on.Domain, on.Customer, on.CatalogId)
 	form := url.Values{}
 	form.Add("_method", "POST")
 	form.Add("redirect-url", redirectUrl)
@@ -213,7 +181,7 @@ func getLoginUrl(creds credentials) (string, error) {
 }
 
 func extractSecretFromLoginUrl(loginUrl string) (string, error) {
-	urlPattern := fmt.Sprintf(regexp.QuoteMeta(fmt.Sprintf("https://%s/titles/%s/%d/publications/", on.domain, on.customer, on.catalogId)) + `(\d*)/\?secret=(.*)`)
+	urlPattern := fmt.Sprintf(regexp.QuoteMeta(fmt.Sprintf("https://%s/titles/%s/%d/publications/", on.Domain, on.Customer, on.CatalogId)) + `(\d*)/\?secret=(.*)`)
 
 	fmt.Println(urlPattern)
 	re := regexp.MustCompile(urlPattern)
@@ -232,7 +200,7 @@ func extractSecretFromLoginUrl(loginUrl string) (string, error) {
 }
 
 func getIssueAccessUrl(secret string, newestIssueId int) (string, error) {
-	endpoint := fmt.Sprintf("https://login-api.e-pages.dk/v1/%s/private/validate/prefix/%s/publication/%d/token", on.domain, on.customer, newestIssueId)
+	endpoint := fmt.Sprintf("https://login-api.e-pages.dk/v1/%s/private/validate/prefix/%s/publication/%d/token", on.Domain, on.Customer, newestIssueId)
 
 	data := url.Values{}
 	data.Add("referrer_url", "POST")
@@ -258,7 +226,7 @@ func getIssueAccessUrl(secret string, newestIssueId int) (string, error) {
 	}
 
 	fmt.Println(string(body))
-	var accessUrl visiolinkTokenResponse
+	var accessUrl visiolink.TokenResponse
 	err = json.Unmarshal(body, &accessUrl)
 	if err != nil {
 		log.Fatalln(err)
@@ -303,12 +271,12 @@ func getIssueAccessKey(accessUrl string) (string, error) {
 	return accessKey, nil
 }
 
-func generateFileName(issue visiolinkCatalog) string {
+func generateFileName(issue visiolink.Catalog) string {
 	return fmt.Sprintf("%s-%s.pdf", issue.Customer, issue.PublicationDate)
 }
 
 func downloadIssue(issueId int, accessKey string, fileName string) error {
-	endpoint := fmt.Sprintf("https://front.e-pages.dk/session-cc/%s/%s/%d/pdf/download_pdf.php", accessKey, on.customer, issueId)
+	endpoint := fmt.Sprintf("https://front.e-pages.dk/session-cc/%s/%s/%d/pdf/download_pdf.php", accessKey, on.Customer, issueId)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
@@ -316,7 +284,7 @@ func downloadIssue(issueId int, accessKey string, fileName string) error {
 	}
 
 	q := req.URL.Query()
-	q.Add("domain", on.readerDomain)
+	q.Add("domain", on.ReaderDomain)
 	req.URL.RawQuery = q.Encode()
 
 	fmt.Println(req.URL.String())
