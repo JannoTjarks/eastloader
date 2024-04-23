@@ -24,14 +24,7 @@ var on visiolink.Paper
 var client *http.Client
 
 func main() {
-	on = visiolink.Paper{
-		CatalogId:    12968,
-		Customer:     "ostfriesischenachrichten",
-		Domain:       "epaper.on-online.de",
-		LoginDomain:  "www.on-online.de",
-		ReaderDomain: "reader.on-online.de",
-	}
-
+	on = visiolink.GetOstfriesischeNachrichtenMetadata()
 	creds := credentials{
 		username: os.Getenv("ON_DOWNLOADER_USERNAME"),
 		password: os.Getenv("ON_DOWNLOADER_PASSWORD"),
