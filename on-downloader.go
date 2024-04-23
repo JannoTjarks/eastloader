@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"jannotjarks/on-downloader/src/internal/visiolink"
+	"jannotjarks/on-downloader/internal/visiolink"
 	"log"
 	"net/http"
 	"net/http/cookiejar"
