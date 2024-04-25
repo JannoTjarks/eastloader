@@ -25,10 +25,9 @@ type TokenResponse struct {
 }
 
 type Paper struct {
-	Customer     string
-	Domain       string
-	LoginDomain  string
-	LoginUrl     string
-	ReaderDomain string
-	CatalogId    int16
+	customer     string
+	domain       string
+	loginDomain  string
+	readerDomain string
+	catalogId    int16
 }
