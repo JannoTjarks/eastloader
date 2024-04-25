@@ -14,6 +14,12 @@ import (
 	"time"
 )
 
+type VisiolinkHandler struct {
+	Creds  auth.Credentials
+	Client *http.Client
+	Paper  Paper
+}
+
 func GetOstfriesischeNachrichtenMetadata() Paper {
 	return Paper{
 		CatalogId:    12968,
@@ -24,16 +30,26 @@ func GetOstfriesischeNachrichtenMetadata() Paper {
 	}
 }
 
-func GetNewestIssue(paper Paper, client *http.Client) Catalog {
+func GetOstfriesenZeitungMetadata() Paper {
+	return Paper{
+		CatalogId:    12966,
+		Customer:     "ostfriesenzeitung",
+		Domain:       "epaper.oz-online.de",
+		LoginDomain:  "www.oz-online.de",
+		ReaderDomain: "reader.oz-online.de",
+	}
+}
+
+func (h VisiolinkHandler) GetNewestIssue() Catalog {
 	t := time.Now()
 	year := fmt.Sprintf("%d", t.Year())
 	month := fmt.Sprintf("%d", t.Month())
 
-	issues := GetIssues(paper, client, year, month)
+	issues := h.GetIssues(year, month)
 	return issues[len(issues)-1]
 }
 
-func GetSpecificIssue(paper Paper, client *http.Client, date string) Catalog {
+func (h VisiolinkHandler) GetSpecificIssue(date string) Catalog {
 	t, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		log.Fatal(err)
@@ -42,7 +58,7 @@ func GetSpecificIssue(paper Paper, client *http.Client, date string) Catalog {
 	year := fmt.Sprintf("%d", t.Year())
 	month := fmt.Sprintf("%d", t.Month())
 
-	issues := GetIssues(paper, client, year, month)
+	issues := h.GetIssues(year, month)
 
 	publicationDate := t.Format(time.DateOnly)
 	fmt.Printf("Searching the issue from the following date: %s\n", publicationDate)
@@ -62,7 +78,7 @@ func GetSpecificIssue(paper Paper, client *http.Client, date string) Catalog {
 	return specificIssue
 }
 
-func GetIssues(paper Paper, client *http.Client, year string, month string) []Catalog {
+func (h VisiolinkHandler) GetIssues(year string, month string) []Catalog {
 	endpoint := "http://device.e-pages.dk/content/desktop/available.php"
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -71,15 +87,15 @@ func GetIssues(paper Paper, client *http.Client, year string, month string) []Ca
 	}
 
 	q := req.URL.Query()
-	q.Add("customer", paper.Customer)
-	q.Add("folder_id", fmt.Sprintf("%d", paper.CatalogId))
+	q.Add("customer", h.Paper.Customer)
+	q.Add("folder_id", fmt.Sprintf("%d", h.Paper.CatalogId))
 	q.Add("year", year)
 	q.Add("month", month)
 	req.URL.RawQuery = q.Encode()
 
 	fmt.Println(req.URL.String())
 
-	resp, err := client.Do(req)
+	resp, err := h.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -101,15 +117,15 @@ func GetIssues(paper Paper, client *http.Client, year string, month string) []Ca
 	return issues.Catalogs
 }
 
-func GetLoginUrl(paper Paper, client *http.Client, creds auth.Credentials) (string, error) {
-	endpoint := fmt.Sprintf("https://%s/benutzer/loginVisiolink", paper.LoginDomain)
+func (h VisiolinkHandler) GetLoginUrl() (string, error) {
+	endpoint := fmt.Sprintf("https://%s/benutzer/loginVisiolink", h.Paper.LoginDomain)
 
-	redirectUrl := fmt.Sprintf("https://%s/titles/%s/%d/?token=[OneTimeToken]", paper.Domain, paper.Customer, paper.CatalogId)
+	redirectUrl := fmt.Sprintf("https://%s/titles/%s/%d/?token=[OneTimeToken]", h.Paper.Domain, h.Paper.Customer, h.Paper.CatalogId)
 	form := url.Values{}
 	form.Add("_method", "POST")
 	form.Add("redirect-url", redirectUrl)
-	form.Add("data[Benutzer][username]", creds.Username)
-	form.Add("data[Benutzer][passwort]", creds.Password)
+	form.Add("data[Benutzer][username]", h.Creds.Username)
+	form.Add("data[Benutzer][passwort]", h.Creds.Password)
 	form.Add("stay", "1")
 
 	req, err := http.NewRequest("POST", endpoint, strings.NewReader(form.Encode()))
@@ -119,7 +135,7 @@ func GetLoginUrl(paper Paper, client *http.Client, creds auth.Credentials) (stri
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := client.Do(req)
+	resp, err := h.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -130,8 +146,8 @@ func GetLoginUrl(paper Paper, client *http.Client, creds auth.Credentials) (stri
 	return resp.Request.URL.String(), nil
 }
 
-func ExtractSecretFromLoginUrl(paper Paper, client *http.Client, loginUrl string) (string, error) {
-	urlPattern := fmt.Sprintf(regexp.QuoteMeta(fmt.Sprintf("https://%s/titles/%s/%d/publications/", paper.Domain, paper.Customer, paper.CatalogId)) + `(\d*)/\?secret=(.*)`)
+func (h VisiolinkHandler) ExtractSecretFromLoginUrl(loginUrl string) (string, error) {
+	urlPattern := fmt.Sprintf(regexp.QuoteMeta(fmt.Sprintf("https://%s/titles/%s/%d/publications/", h.Paper.Domain, h.Paper.Customer, h.Paper.CatalogId)) + `(\d*)/\?secret=(.*)`)
 
 	fmt.Println(urlPattern)
 	re := regexp.MustCompile(urlPattern)
@@ -149,8 +165,8 @@ func ExtractSecretFromLoginUrl(paper Paper, client *http.Client, loginUrl string
 	return secret, nil
 }
 
-func GetIssueAccessUrl(paper Paper, client *http.Client, secret string, newestIssueId int) (string, error) {
-	endpoint := fmt.Sprintf("https://login-api.e-pages.dk/v1/%s/private/validate/prefix/%s/publication/%d/token", paper.Domain, paper.Customer, newestIssueId)
+func (h VisiolinkHandler) GetIssueAccessUrl(secret string, newestIssueId int) (string, error) {
+	endpoint := fmt.Sprintf("https://login-api.e-pages.dk/v1/%s/private/validate/prefix/%s/publication/%d/token", h.Paper.Domain, h.Paper.Customer, newestIssueId)
 
 	data := url.Values{}
 	data.Add("referrer_url", "POST")
@@ -163,7 +179,7 @@ func GetIssueAccessUrl(paper Paper, client *http.Client, secret string, newestIs
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := client.Do(req)
+	resp, err := h.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,7 +203,7 @@ func GetIssueAccessUrl(paper Paper, client *http.Client, secret string, newestIs
 	return accessUrl.AccessURL, nil
 }
 
-func GetIssueAccessKey(client *http.Client, accessUrl string) (string, error) {
+func (h VisiolinkHandler) GetIssueAccessKey(accessUrl string) (string, error) {
 	endpoint := accessUrl
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -195,7 +211,7 @@ func GetIssueAccessKey(client *http.Client, accessUrl string) (string, error) {
 		log.Fatal(err)
 	}
 
-	resp, err := client.Do(req)
+	resp, err := h.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -221,12 +237,12 @@ func GetIssueAccessKey(client *http.Client, accessUrl string) (string, error) {
 	return accessKey, nil
 }
 
-func GenerateFileName(issue Catalog) string {
+func (h VisiolinkHandler) GenerateFileName(issue Catalog) string {
 	return fmt.Sprintf("%s-%s.pdf", issue.Customer, issue.PublicationDate)
 }
 
-func DownloadIssue(paper Paper, client *http.Client, issueId int, accessKey string, fileName string) error {
-	endpoint := fmt.Sprintf("https://front.e-pages.dk/session-cc/%s/%s/%d/pdf/download_pdf.php", accessKey, paper.Customer, issueId)
+func (h VisiolinkHandler) DownloadIssue(issueId int, accessKey string, fileName string) error {
+	endpoint := fmt.Sprintf("https://front.e-pages.dk/session-cc/%s/%s/%d/pdf/download_pdf.php", accessKey, h.Paper.Customer, issueId)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
@@ -234,12 +250,12 @@ func DownloadIssue(paper Paper, client *http.Client, issueId int, accessKey stri
 	}
 
 	q := req.URL.Query()
-	q.Add("domain", paper.ReaderDomain)
+	q.Add("domain", h.Paper.ReaderDomain)
 	req.URL.RawQuery = q.Encode()
 
 	fmt.Println(req.URL.String())
 
-	resp, err := client.Do(req)
+	resp, err := h.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}

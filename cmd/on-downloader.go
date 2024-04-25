@@ -18,32 +18,34 @@ func main() {
 		Jar: jar,
 	}
 
-	issue := visiolink.GetNewestIssue(paper, client)
+	handler := visiolink.VisiolinkHandler{Client: client, Paper: paper, Creds: creds}
+
+	issue := handler.GetNewestIssue()
 	fmt.Println(issue.PublicationDate)
 
-	loginUrl, err := visiolink.GetLoginUrl(paper, client, creds)
+	loginUrl, err := handler.GetLoginUrl()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	secret, err := visiolink.ExtractSecretFromLoginUrl(paper, client, loginUrl)
+	secret, err := handler.ExtractSecretFromLoginUrl(loginUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	accessUrl, err := visiolink.GetIssueAccessUrl(paper, client, secret, issue.Catalog)
+	accessUrl, err := handler.GetIssueAccessUrl(secret, issue.Catalog)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	accessKey, err := visiolink.GetIssueAccessKey(client, accessUrl)
+	accessKey, err := handler.GetIssueAccessKey(accessUrl)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fileName := visiolink.GenerateFileName(issue)
+	fileName := handler.GenerateFileName(issue)
 
-	err = visiolink.DownloadIssue(paper, client, issue.Catalog, accessKey, fileName)
+	err = handler.DownloadIssue(issue.Catalog, accessKey, fileName)
 	if err != nil {
 		log.Fatal(err)
 	}
