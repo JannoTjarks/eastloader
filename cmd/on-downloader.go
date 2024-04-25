@@ -5,10 +5,15 @@ import (
 	"jannotjarks/on-downloader/internal/visiolink"
 	"net/http"
 	"net/http/cookiejar"
+	"os"
 )
 
 func main() {
-	creds := auth.GetCredentials()
+	creds := auth.Credentials{
+		Username: os.Getenv("ON_DOWNLOADER_USERNAME"),
+		Password: os.Getenv("ON_DOWNLOADER_PASSWORD"),
+	}
+
 	paper := visiolink.GetOstfriesischeNachrichtenMetadata()
 
 	jar, _ := cookiejar.New(nil)
