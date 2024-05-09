@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"jannotjarks/on-downloader/internal/visiolink"
+	"jannotjarks/eastloader/internal/visiolink"
 	"net/http"
 	"net/http/cookiejar"
 	"os"

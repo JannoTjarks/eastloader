@@ -1,4 +1,4 @@
-module jannotjarks/on-downloader
+module jannotjarks/eastloader
 
 go 1.22.1
 

@@ -7,8 +7,8 @@ import (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "on-downloader",
-	Short: "on-downloader is a small cli tool to download the regional newsletter \"Ostfriesische Nachrichten\"",
+	Use:   "eastloader",
+	Short: "eastloader is a small cli tool to download the regional newsletter \"Ostfriesische Nachrichten\"",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println("You have to specify a newspaper!")
 		fmt.Println("Currently there is support for:")

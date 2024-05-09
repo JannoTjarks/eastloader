@@ -1,4 +1,4 @@
-# on-downloader
+# eastloader
 **A CLI Tool to download the "OstfriesischeNachrichten".**
 
 The Publisher "Zeitungsgruppe Ostfriesland" is using the products of the company
@@ -12,7 +12,7 @@ the "Ostfriesen Zeitung".
 
 To start a download, you need just to build the project with go build for 
 your architecture, or just run a `go run cmd/oz-downloader/main.go` respectively
-`go run cmd/on-downloader/main.go`. It will automatically 
+`go run cmd/eastloader/main.go`. It will automatically 
 download the newest issue.
 
 ### Environment variables

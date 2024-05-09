@@ -1,7 +1,7 @@
 package main
 
 import (
-	"jannotjarks/on-downloader/cmd"
+	"jannotjarks/eastloader/cmd"
 )
 
 func main() {
