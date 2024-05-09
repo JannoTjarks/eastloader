@@ -31,3 +31,8 @@ type Paper struct {
 	readerDomain string
 	catalogId    int16
 }
+
+type Credentials struct {
+	Username string
+	Password string
+}

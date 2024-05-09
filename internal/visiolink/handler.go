@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"jannotjarks/on-downloader/internal/auth"
 	"log"
 	"net/http"
 	"net/url"
@@ -15,7 +14,7 @@ import (
 )
 
 type VisiolinkHandler struct {
-	Creds  auth.Credentials
+	Creds  Credentials
 	Client *http.Client
 	Paper  Paper
 }

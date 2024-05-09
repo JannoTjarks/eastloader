@@ -1,7 +1,6 @@
 package main
 
 import (
-	"jannotjarks/on-downloader/internal/auth"
 	"jannotjarks/on-downloader/internal/visiolink"
 	"net/http"
 	"net/http/cookiejar"
@@ -9,7 +8,7 @@ import (
 )
 
 func main() {
-	creds := auth.Credentials{
+	creds := visiolink.Credentials{
 		Username: os.Getenv("OZ_DOWNLOADER_USERNAME"),
 		Password: os.Getenv("OZ_DOWNLOADER_PASSWORD"),
 	}
