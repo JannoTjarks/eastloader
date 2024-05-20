@@ -10,10 +10,9 @@ var rootCmd = &cobra.Command{
 	Use:   "eastloader",
 	Short: "eastloader is a small cli tool to download the regional newsletter \"Ostfriesische Nachrichten\"",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("You have to specify a newspaper!")
+		fmt.Println("You have to specify a newspaper or api!")
 		fmt.Println("Currently there is support for:")
-		fmt.Println("\t1. Ostfriesische Nachrichten \t(on)")
-		fmt.Println("\t2. Ostfriesischen Zeitung \t(oz)")
+		fmt.Println("\t1. Visiolink ApS, which supports e.g. the Ostfriesischen Nachrichten (visiolink)")
 	},
 }
 
