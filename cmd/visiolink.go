@@ -13,6 +13,7 @@ import (
 func init() {
 	rootCmd.AddCommand(visiolinkCmd)
 	visiolinkCmd.PersistentFlags().String("name", "", "The (short) name of the wanted paper")
+	visiolinkCmd.PersistentFlags().String("date", "", "The release date of the wanted paper")
 }
 
 var visiolinkCmd = &cobra.Command{
@@ -51,7 +52,9 @@ var visiolinkCmd = &cobra.Command{
 			Jar: jar,
 		}
 
+		date, _ := cmd.Flags().GetString("date")
+
 		handler := visiolink.VisiolinkHandler{Client: client, Paper: paper, Creds: creds}
-		handler.RunDownloadRoutine()
+		handler.RunDownloadRoutine(date)
 	},
 }

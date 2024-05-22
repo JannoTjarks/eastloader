@@ -39,8 +39,14 @@ func GetOstfriesenZeitungMetadata() Paper {
 	}
 }
 
-func (h VisiolinkHandler) RunDownloadRoutine() {
-	issue := h.getNewestIssue()
+func (h VisiolinkHandler) RunDownloadRoutine(date string) {
+	var issue Catalog
+	if date == "" {
+		issue = h.getNewestIssue()
+	} else {
+		issue = h.GetSpecificIssue(date)
+	}
+
 	fmt.Println(issue.PublicationDate)
 
 	loginUrl, err := h.getLoginUrl()
