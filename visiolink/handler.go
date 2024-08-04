@@ -73,7 +73,7 @@ func (h VisiolinkHandler) RunDownloadRoutine(date string) {
 
 	done := make(chan bool, 1)
 	go h.downloadIssue(done, issue.Catalog, accessKey, fileName)
-    WaitForHttpResponse(done)
+	WaitForHttpResponse(done)
 }
 
 func (h VisiolinkHandler) getNewestIssue() Catalog {
