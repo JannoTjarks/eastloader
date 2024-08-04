@@ -24,6 +24,8 @@ var visiolinkCmd = &cobra.Command{
 
 		var paper visiolink.Paper
 
+		metadataMap := visiolink.MakeVisiolinkMetadataMap()
+
 		name, _ := cmd.Flags().GetString("name")
 		switch name {
 		case "":
@@ -37,14 +39,15 @@ var visiolinkCmd = &cobra.Command{
 				Username: os.Getenv("OZ_DOWNLOADER_USERNAME"),
 				Password: os.Getenv("OZ_DOWNLOADER_PASSWORD"),
 			}
-			paper = visiolink.GetOstfriesenZeitungMetadata()
+
+			paper = metadataMap["OstfriesenZeitung"]
 		case "on":
 			creds = visiolink.Credentials{
 				Username: os.Getenv("ON_DOWNLOADER_USERNAME"),
 				Password: os.Getenv("ON_DOWNLOADER_PASSWORD"),
 			}
 
-			paper = visiolink.GetOstfriesischeNachrichtenMetadata()
+			paper = metadataMap["OstfriesischeNachrichten"]
 		}
 
 		jar, _ := cookiejar.New(nil)

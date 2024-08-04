@@ -20,24 +20,23 @@ type VisiolinkHandler struct {
 	Paper  Paper
 }
 
-func GetOstfriesischeNachrichtenMetadata() Paper {
-	return Paper{
+func MakeVisiolinkMetadataMap() map[string]Paper {
+	metadataMap := make(map[string]Paper)
+	metadataMap["OstfriesischeNachrichten"] = Paper{
 		catalogId:    12968,
 		customer:     "ostfriesischenachrichten",
 		domain:       "epaper.on-online.de",
 		loginDomain:  "www.on-online.de",
 		readerDomain: "reader.on-online.de",
 	}
-}
-
-func GetOstfriesenZeitungMetadata() Paper {
-	return Paper{
+	metadataMap["OstfriesenZeitung"] = Paper{
 		catalogId:    12966,
 		customer:     "ostfriesenzeitung",
 		domain:       "epaper.oz-online.de",
 		loginDomain:  "www.oz-online.de",
 		readerDomain: "reader.oz-online.de",
 	}
+	return metadataMap
 }
 
 func (h VisiolinkHandler) RunDownloadRoutine(date string) {
