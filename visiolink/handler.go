@@ -2,6 +2,7 @@ package visiolink
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -70,6 +71,16 @@ func (h VisiolinkHandler) RunDownloadRoutine(date string) {
 	}
 
 	fileName := h.generateFileName(issue)
+
+	fileExists, errFileExists := checkIfFileExists(fileName)
+	if fileExists {
+		fmt.Printf("Download will be skipped, because there is already a file with the name \"%s\"\n", fileName)
+		return
+	}
+
+	if errFileExists != nil {
+		log.Fatal(errFileExists)
+	}
 
 	done := make(chan bool, 1)
 	go h.downloadIssue(done, issue.Catalog, accessKey, fileName)
@@ -313,4 +324,17 @@ func (h VisiolinkHandler) downloadIssue(done chan bool, issueId int, accessKey s
 	done <- true
 
 	return nil
+}
+
+func checkIfFileExists(fileName string) (bool, error) {
+	_, errFileExist := os.Stat(fileName)
+	if errFileExist != nil && errors.Is(errFileExist, os.ErrNotExist) {
+		return false, nil
+	}
+
+	if errFileExist != nil {
+		return false, errFileExist
+	}
+
+	return true, nil
 }
