@@ -22,7 +22,7 @@ var visiolinkCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		var creds visiolink.Credentials
 
-		var paper visiolink.Paper
+		var paper visiolink.Metadata
 
 		metadataMap := visiolink.MakeVisiolinkMetadataMap()
 

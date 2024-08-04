@@ -24,7 +24,7 @@ type TokenResponse struct {
 	Success   bool   `json:"success"`
 }
 
-type Paper struct {
+type Metadata struct {
 	customer     string
 	domain       string
 	loginDomain  string

@@ -17,19 +17,19 @@ import (
 type VisiolinkHandler struct {
 	Creds  Credentials
 	Client *http.Client
-	Paper  Paper
+	Paper  Metadata
 }
 
-func MakeVisiolinkMetadataMap() map[string]Paper {
-	metadataMap := make(map[string]Paper)
-	metadataMap["OstfriesischeNachrichten"] = Paper{
+func MakeVisiolinkMetadataMap() map[string]Metadata {
+	metadataMap := make(map[string]Metadata)
+	metadataMap["OstfriesischeNachrichten"] = Metadata{
 		catalogId:    12968,
 		customer:     "ostfriesischenachrichten",
 		domain:       "epaper.on-online.de",
 		loginDomain:  "www.on-online.de",
 		readerDomain: "reader.on-online.de",
 	}
-	metadataMap["OstfriesenZeitung"] = Paper{
+	metadataMap["OstfriesenZeitung"] = Metadata{
 		catalogId:    12966,
 		customer:     "ostfriesenzeitung",
 		domain:       "epaper.oz-online.de",
