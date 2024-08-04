@@ -71,10 +71,9 @@ func (h VisiolinkHandler) RunDownloadRoutine(date string) {
 
 	fileName := h.generateFileName(issue)
 
-	err = h.downloadIssue(issue.Catalog, accessKey, fileName)
-	if err != nil {
-		log.Fatal(err)
-	}
+	done := make(chan bool, 1)
+	go h.downloadIssue(done, issue.Catalog, accessKey, fileName)
+    WaitForHttpResponse(done)
 }
 
 func (h VisiolinkHandler) getNewestIssue() Catalog {
@@ -278,7 +277,7 @@ func (h VisiolinkHandler) generateFileName(issue Catalog) string {
 	return fmt.Sprintf("%s-%s.pdf", issue.Customer, issue.PublicationDate)
 }
 
-func (h VisiolinkHandler) downloadIssue(issueId int, accessKey string, fileName string) error {
+func (h VisiolinkHandler) downloadIssue(done chan bool, issueId int, accessKey string, fileName string) error {
 	endpoint := fmt.Sprintf("https://front.e-pages.dk/session-cc/%s/%s/%d/pdf/download_pdf.php", accessKey, h.Paper.customer, issueId)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -310,6 +309,8 @@ func (h VisiolinkHandler) downloadIssue(issueId int, accessKey string, fileName 
 	if writeErr != nil {
 		log.Fatal(writeErr)
 	}
+
+	done <- true
 
 	return nil
 }
