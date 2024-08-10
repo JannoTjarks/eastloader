@@ -2,7 +2,6 @@ package visiolink
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -17,7 +16,7 @@ import (
 type VisiolinkHandler struct {
 	Creds  Credentials
 	Client *http.Client
-	Paper  Metadata
+	Meta   Metadata
 }
 
 func MakeVisiolinkMetadataMap() map[string]Metadata {
@@ -39,63 +38,16 @@ func MakeVisiolinkMetadataMap() map[string]Metadata {
 	return metadataMap
 }
 
-func (h VisiolinkHandler) RunDownloadRoutine(date string) {
-	var issue Catalog
-	if date == "" {
-		issue = h.getNewestIssue()
-	} else {
-		issue = h.GetSpecificIssue(date)
-	}
-
-	fmt.Println(issue.PublicationDate)
-
-	loginUrl, err := h.getLoginUrl()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	secret, err := h.extractSecretFromLoginUrl(loginUrl)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	accessUrl, err := h.getIssueAccessUrl(secret, issue.Catalog)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	accessKey, err := h.getIssueAccessKey(accessUrl)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fileName := h.generateFileName(issue)
-
-	fileExists, errFileExists := checkIfFileExists(fileName)
-	if fileExists {
-		fmt.Printf("Download will be skipped, because there is already a file with the name \"%s\"\n", fileName)
-		return
-	}
-
-	if errFileExists != nil {
-		log.Fatal(errFileExists)
-	}
-
-	done := make(chan bool, 1)
-	go h.downloadIssue(done, issue.Catalog, accessKey, fileName)
-	WaitForHttpResponse(done)
-}
-
-func (h VisiolinkHandler) getNewestIssue() Catalog {
+func GetNewestIssue(handler VisiolinkHandler) Catalog {
 	t := time.Now()
 	year := fmt.Sprintf("%d", t.Year())
 	month := fmt.Sprintf("%d", t.Month())
 
-	issues := h.GetIssues(year, month)
+	issues := getIssues(handler, year, month)
 	return issues[len(issues)-1]
 }
 
-func (h VisiolinkHandler) GetSpecificIssue(date string) Catalog {
+func GetSpecificIssue(handler VisiolinkHandler, date string) Catalog {
 	t, err := time.Parse("2006-01-02", date)
 	if err != nil {
 		log.Fatal(err)
@@ -104,7 +56,7 @@ func (h VisiolinkHandler) GetSpecificIssue(date string) Catalog {
 	year := fmt.Sprintf("%d", t.Year())
 	month := fmt.Sprintf("%d", t.Month())
 
-	issues := h.GetIssues(year, month)
+	issues := getIssues(handler, year, month)
 
 	publicationDate := t.Format(time.DateOnly)
 	fmt.Printf("Searching the issue from the following date: %s\n", publicationDate)
@@ -124,7 +76,7 @@ func (h VisiolinkHandler) GetSpecificIssue(date string) Catalog {
 	return specificIssue
 }
 
-func (h VisiolinkHandler) GetIssues(year string, month string) []Catalog {
+func getIssues(handler VisiolinkHandler, year string, month string) []Catalog {
 	endpoint := "http://device.e-pages.dk/content/desktop/available.php"
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -133,15 +85,15 @@ func (h VisiolinkHandler) GetIssues(year string, month string) []Catalog {
 	}
 
 	q := req.URL.Query()
-	q.Add("customer", h.Paper.customer)
-	q.Add("folder_id", fmt.Sprintf("%d", h.Paper.catalogId))
+	q.Add("customer", handler.Meta.customer)
+	q.Add("folder_id", fmt.Sprintf("%d", handler.Meta.catalogId))
 	q.Add("year", year)
 	q.Add("month", month)
 	req.URL.RawQuery = q.Encode()
 
 	fmt.Println(req.URL.String())
 
-	resp, err := h.Client.Do(req)
+	resp, err := handler.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -163,15 +115,15 @@ func (h VisiolinkHandler) GetIssues(year string, month string) []Catalog {
 	return issues.Catalogs
 }
 
-func (h VisiolinkHandler) getLoginUrl() (string, error) {
-	endpoint := fmt.Sprintf("https://%s/benutzer/loginVisiolink", h.Paper.loginDomain)
+func GetLoginUrl(handler VisiolinkHandler) (string, error) {
+	endpoint := fmt.Sprintf("https://%s/benutzer/loginVisiolink", handler.Meta.loginDomain)
 
-	redirectUrl := fmt.Sprintf("https://%s/titles/%s/%d/?token=[OneTimeToken]", h.Paper.domain, h.Paper.customer, h.Paper.catalogId)
+	redirectUrl := fmt.Sprintf("https://%s/titles/%s/%d/?token=[OneTimeToken]", handler.Meta.domain, handler.Meta.customer, handler.Meta.catalogId)
 	form := url.Values{}
 	form.Add("_method", "POST")
 	form.Add("redirect-url", redirectUrl)
-	form.Add("data[Benutzer][username]", h.Creds.Username)
-	form.Add("data[Benutzer][passwort]", h.Creds.Password)
+	form.Add("data[Benutzer][username]", handler.Creds.Username)
+	form.Add("data[Benutzer][passwort]", handler.Creds.Password)
 	form.Add("stay", "1")
 
 	req, err := http.NewRequest("POST", endpoint, strings.NewReader(form.Encode()))
@@ -181,7 +133,7 @@ func (h VisiolinkHandler) getLoginUrl() (string, error) {
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := h.Client.Do(req)
+	resp, err := handler.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -192,8 +144,8 @@ func (h VisiolinkHandler) getLoginUrl() (string, error) {
 	return resp.Request.URL.String(), nil
 }
 
-func (h VisiolinkHandler) extractSecretFromLoginUrl(loginUrl string) (string, error) {
-	urlPattern := fmt.Sprintf(regexp.QuoteMeta(fmt.Sprintf("https://%s/titles/%s/%d/publications/", h.Paper.domain, h.Paper.customer, h.Paper.catalogId)) + `(\d*)/\?secret=(.*)`)
+func ExtractSecretFromLoginUrl(handler VisiolinkHandler, loginUrl string) (string, error) {
+	urlPattern := fmt.Sprintf(regexp.QuoteMeta(fmt.Sprintf("https://%s/titles/%s/%d/publications/", handler.Meta.domain, handler.Meta.customer, handler.Meta.catalogId)) + `(\d*)/\?secret=(.*)`)
 
 	fmt.Println(urlPattern)
 	re := regexp.MustCompile(urlPattern)
@@ -211,8 +163,8 @@ func (h VisiolinkHandler) extractSecretFromLoginUrl(loginUrl string) (string, er
 	return secret, nil
 }
 
-func (h VisiolinkHandler) getIssueAccessUrl(secret string, newestIssueId int) (string, error) {
-	endpoint := fmt.Sprintf("https://login-api.e-pages.dk/v1/%s/private/validate/prefix/%s/publication/%d/token", h.Paper.domain, h.Paper.customer, newestIssueId)
+func GetIssueAccessUrl(handler VisiolinkHandler, secret string, newestIssueId int) (string, error) {
+	endpoint := fmt.Sprintf("https://login-api.e-pages.dk/v1/%s/private/validate/prefix/%s/publication/%d/token", handler.Meta.domain, handler.Meta.customer, newestIssueId)
 
 	data := url.Values{}
 	data.Add("referrer_url", "POST")
@@ -225,7 +177,7 @@ func (h VisiolinkHandler) getIssueAccessUrl(secret string, newestIssueId int) (s
 
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := h.Client.Do(req)
+	resp, err := handler.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -249,7 +201,7 @@ func (h VisiolinkHandler) getIssueAccessUrl(secret string, newestIssueId int) (s
 	return accessUrl.AccessURL, nil
 }
 
-func (h VisiolinkHandler) getIssueAccessKey(accessUrl string) (string, error) {
+func GetIssueAccessKey(handler VisiolinkHandler, accessUrl string) (string, error) {
 	endpoint := accessUrl
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -257,7 +209,7 @@ func (h VisiolinkHandler) getIssueAccessKey(accessUrl string) (string, error) {
 		log.Fatal(err)
 	}
 
-	resp, err := h.Client.Do(req)
+	resp, err := handler.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -283,12 +235,12 @@ func (h VisiolinkHandler) getIssueAccessKey(accessUrl string) (string, error) {
 	return accessKey, nil
 }
 
-func (h VisiolinkHandler) generateFileName(issue Catalog) string {
+func GenerateFileName(issue Catalog) string {
 	return fmt.Sprintf("%s-%s.pdf", issue.Customer, issue.PublicationDate)
 }
 
-func (h VisiolinkHandler) downloadIssue(done chan bool, issueId int, accessKey string, fileName string) error {
-	endpoint := fmt.Sprintf("https://front.e-pages.dk/session-cc/%s/%s/%d/pdf/download_pdf.php", accessKey, h.Paper.customer, issueId)
+func DownloadIssue(handler VisiolinkHandler, done chan bool, issueId int, accessKey string, fileName string) error {
+	endpoint := fmt.Sprintf("https://front.e-pages.dk/session-cc/%s/%s/%d/pdf/download_pdf.php", accessKey, handler.Meta.customer, issueId)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
 	if err != nil {
@@ -296,12 +248,12 @@ func (h VisiolinkHandler) downloadIssue(done chan bool, issueId int, accessKey s
 	}
 
 	q := req.URL.Query()
-	q.Add("domain", h.Paper.readerDomain)
+	q.Add("domain", handler.Meta.readerDomain)
 	req.URL.RawQuery = q.Encode()
 
 	fmt.Println(req.URL.String())
 
-	resp, err := h.Client.Do(req)
+	resp, err := handler.Client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -325,15 +277,3 @@ func (h VisiolinkHandler) downloadIssue(done chan bool, issueId int, accessKey s
 	return nil
 }
 
-func checkIfFileExists(fileName string) (bool, error) {
-	_, errFileExist := os.Stat(fileName)
-	if errFileExist != nil && errors.Is(errFileExist, os.ErrNotExist) {
-		return false, nil
-	}
-
-	if errFileExist != nil {
-		return false, errFileExist
-	}
-
-	return true, nil
-}

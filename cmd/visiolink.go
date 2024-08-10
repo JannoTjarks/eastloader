@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"jannotjarks/eastloader/visiolink"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"os"
@@ -57,7 +58,54 @@ var visiolinkCmd = &cobra.Command{
 
 		date, _ := cmd.Flags().GetString("date")
 
-		handler := visiolink.VisiolinkHandler{Client: client, Paper: paper, Creds: creds}
-		handler.RunDownloadRoutine(date)
+		handler := visiolink.VisiolinkHandler{Client: client, Meta: paper, Creds: creds}
+		RunDownloadRoutine(date, handler)
 	},
+}
+
+func RunDownloadRoutine(date string, handler visiolink.VisiolinkHandler) {
+	var issue visiolink.Catalog
+	if date == "" {
+		issue = visiolink.GetNewestIssue(handler)
+	} else {
+		issue = visiolink.GetSpecificIssue(handler, date)
+	}
+
+	fileName := visiolink.GenerateFileName(issue)
+
+	fileExists, errFileExists := checkIfFileExists(fileName)
+	if fileExists {
+		fmt.Printf("Download will be skipped, because there is already a file with the name \"%s\"\n", fileName)
+		return
+	}
+
+	if errFileExists != nil {
+		log.Fatal(errFileExists)
+	}
+
+	fmt.Println(issue.PublicationDate)
+
+	loginUrl, err := visiolink.GetLoginUrl(handler)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	secret, err := visiolink.ExtractSecretFromLoginUrl(handler, loginUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	accessUrl, err := visiolink.GetIssueAccessUrl(handler, secret, issue.Catalog)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	accessKey, err := visiolink.GetIssueAccessKey(handler, accessUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	done := make(chan bool, 1)
+	go visiolink.DownloadIssue(handler, done, issue.Catalog, accessKey, fileName)
+	waitForHttpResponse(done)
 }
