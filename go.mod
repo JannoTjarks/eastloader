@@ -2,7 +2,10 @@ module jannotjarks/eastloader
 
 go 1.22.1
 
-require github.com/spf13/cobra v1.8.0
+require (
+	github.com/spf13/cobra v1.8.0
+	golang.org/x/net v0.28.0
+)
 
 require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
