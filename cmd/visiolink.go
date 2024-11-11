@@ -15,6 +15,7 @@ func init() {
 	rootCmd.AddCommand(visiolinkCmd)
 	visiolinkCmd.PersistentFlags().String("name", "", "The (short) name of the wanted paper")
 	visiolinkCmd.PersistentFlags().String("date", "", "The release date of the wanted paper")
+	visiolinkCmd.PersistentFlags().String("output-dir", "./", "The directory, where the downloaded files will get stored")
 }
 
 var visiolinkCmd = &cobra.Command{
@@ -57,8 +58,9 @@ var visiolinkCmd = &cobra.Command{
 		}
 
 		date, _ := cmd.Flags().GetString("date")
+		outputDir, _ := cmd.Flags().GetString("output-dir")
 
-		handler := visiolink.VisiolinkHandler{Client: client, Meta: paper, Creds: creds}
+		handler := visiolink.VisiolinkHandler{Client: client, Meta: paper, Creds: creds, OutputDirectory: outputDir}
 		RunDownloadRoutine(date, handler)
 	},
 }
@@ -71,7 +73,7 @@ func RunDownloadRoutine(date string, handler visiolink.VisiolinkHandler) {
 		issue = visiolink.GetSpecificIssue(handler, date)
 	}
 
-	fileName := visiolink.GenerateFileName(issue)
+	fileName := visiolink.GenerateFileName(handler, issue)
 
 	fileExists, errFileExists := checkIfFileExists(fileName)
 	if fileExists {

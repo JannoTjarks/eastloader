@@ -14,9 +14,10 @@ import (
 )
 
 type VisiolinkHandler struct {
-	Creds  Credentials
-	Client *http.Client
-	Meta   Metadata
+	Creds           Credentials
+	Client          *http.Client
+	Meta            Metadata
+	OutputDirectory string
 }
 
 func MakeVisiolinkMetadataMap() map[string]Metadata {
@@ -235,8 +236,8 @@ func GetIssueAccessKey(handler VisiolinkHandler, accessUrl string) (string, erro
 	return accessKey, nil
 }
 
-func GenerateFileName(issue Catalog) string {
-	return fmt.Sprintf("%s-%s.pdf", issue.Customer, issue.PublicationDate)
+func GenerateFileName(handler VisiolinkHandler, issue Catalog) string {
+	return fmt.Sprintf("%s/%s-%s.pdf", handler.OutputDirectory, issue.Customer, issue.PublicationDate)
 }
 
 func DownloadIssue(handler VisiolinkHandler, done chan bool, issueId int, accessKey string, fileName string) error {
@@ -276,4 +277,3 @@ func DownloadIssue(handler VisiolinkHandler, done chan bool, issueId int, access
 
 	return nil
 }
-
