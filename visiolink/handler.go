@@ -240,7 +240,7 @@ func GenerateFileName(handler VisiolinkHandler, issue Catalog) string {
 	return fmt.Sprintf("%s/%s-%s.pdf", handler.OutputDirectory, issue.Customer, issue.PublicationDate)
 }
 
-func DownloadIssue(handler VisiolinkHandler, done chan bool, issueId int, accessKey string, fileName string) error {
+func DownloadIssue(handler VisiolinkHandler, issueId int, accessKey string, fileName string) error {
 	endpoint := fmt.Sprintf("https://front.e-pages.dk/session-cc/%s/%s/%d/pdf/download_pdf.php", accessKey, handler.Meta.customer, issueId)
 
 	req, err := http.NewRequest("GET", endpoint, nil)
@@ -272,8 +272,6 @@ func DownloadIssue(handler VisiolinkHandler, done chan bool, issueId int, access
 	if writeErr != nil {
 		log.Fatal(writeErr)
 	}
-
-	done <- true
 
 	return nil
 }

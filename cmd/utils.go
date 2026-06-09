@@ -7,12 +7,11 @@ import (
 	"time"
 )
 
-func waitForHttpResponse(done chan bool) {
+func printDots(stop chan bool) {
 out:
 	for {
 		select {
-		case <-done:
-			fmt.Println("\nDownload is finished!")
+		case <-stop:
 			break out
 		default:
 			fmt.Print(".")

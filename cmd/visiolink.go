@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
+	"sync"
+	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -107,7 +109,16 @@ func RunDownloadRoutine(date string, handler visiolink.VisiolinkHandler) {
 		log.Fatal(err)
 	}
 
-	done := make(chan bool, 1)
-	go visiolink.DownloadIssue(handler, done, issue.Catalog, accessKey, fileName)
-	waitForHttpResponse(done)
+	var wg sync.WaitGroup
+	wg.Go(func() {
+		visiolink.DownloadIssue(handler, issue.Catalog, accessKey, fileName)
+	})
+
+	fmt.Print("Downloading...")
+	stop := make(chan bool, 1)
+	go printDots(stop)
+
+	wg.Wait()
+	stop <- true
+	fmt.Println("\nDownload is finished!")
 }
