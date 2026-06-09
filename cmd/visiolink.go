@@ -67,6 +67,10 @@ var visiolinkCmd = &cobra.Command{
 }
 
 func RunDownloadRoutine(date string, handler visiolink.VisiolinkHandler) {
+	fmt.Printf("Preparations are currently ongoing...")
+	preStepsFinished := make(chan bool, 1)
+	go printDots(preStepsFinished)
+
 	var issue visiolink.Catalog
 	if date == "" {
 		issue = visiolink.GetNewestIssue(handler)
@@ -78,7 +82,7 @@ func RunDownloadRoutine(date string, handler visiolink.VisiolinkHandler) {
 
 	fileExists, errFileExists := checkIfFileExists(fileName)
 	if fileExists {
-		fmt.Printf("Download will be skipped, because there is already a file with the name \"%s\"\n", fileName)
+		fmt.Printf("\nDownload will be skipped, because there is already a file with the name \"%s\"\n", fileName)
 		return
 	}
 
@@ -106,16 +110,18 @@ func RunDownloadRoutine(date string, handler visiolink.VisiolinkHandler) {
 		log.Fatal(err)
 	}
 
+	preStepsFinished <- true
+
 	var wg sync.WaitGroup
+	fmt.Printf("\nThe issue dated %s is being downloaded...", issue.PublicationDate)
+	downloadFinished := make(chan bool, 1)
+	go printDots(downloadFinished)
+
 	wg.Go(func() {
 		visiolink.DownloadIssue(handler, issue.Catalog, accessKey, fileName)
 	})
 
-	fmt.Printf("The issue dated %s is being downloaded...", issue.PublicationDate)
-	stop := make(chan bool, 1)
-	go printDots(stop)
-
 	wg.Wait()
-	stop <- true
+	downloadFinished <- true
 	fmt.Println("\nDownload is finished!")
 }
