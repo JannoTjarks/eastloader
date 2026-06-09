@@ -19,8 +19,8 @@ var fazCmd = &cobra.Command{
 	Short: "Downloads an epaper based on faz ApS",
 	Run: func(cmd *cobra.Command, args []string) {
 		var creds = faz.Credentials{
-			Email:      os.Getenv("FAZ_DOWNLOADER_USERNAME"),
-			Password:   os.Getenv("FAZ_DOWNLOADER_PASSWORD"),
+			Email:    os.Getenv("FAZ_DOWNLOADER_USERNAME"),
+			Password: os.Getenv("FAZ_DOWNLOADER_PASSWORD"),
 		}
 
 		jar, _ := cookiejar.New(nil)
@@ -31,7 +31,7 @@ var fazCmd = &cobra.Command{
 		// date, _ := cmd.Flags().GetString("date")
 		handler := faz.FazHandler{Client: client, Creds: creds}
 		faz.Login(handler)
-        body, _ := faz.GetKioskHtml(handler)
-        faz.GetFazPaper(body)
+		body, _ := faz.GetKioskHtml(handler)
+		faz.ParsePaperFromHtmlBody(body)
 	},
 }

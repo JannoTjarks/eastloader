@@ -7,8 +7,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strings"
-    "regexp"
 
 	"golang.org/x/net/html"
 )
@@ -99,70 +99,70 @@ func GetIssues(handler FazHandler) {
 	fmt.Println(string(body))
 }
 
-func GetFazPaper(body string) {
+func ParsePaperFromHtmlBody(body string) {
 	doc, err := html.Parse(strings.NewReader(string(body)))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-    m := make(map[string]FazPaper)
+	m := make(map[string]FazPaper)
 
-    var f func(*html.Node)
-    f = func(n *html.Node) {
-        paper, err := parseEpaperHref(n)
-        // Add error handling
-        if err == nil {
-            re := regexp.MustCompile(`(?m)\d{2}.\d{2}.\d{4}`)
-            date := re.FindString(paper.Name)
-            m[date] = FazPaper {
-                Name: paper.Name,
-                URL: paper.URL,
-            }
-        }
-        for c := n.FirstChild; c != nil; c = c.NextSibling {
-            f(c)
-        }
-    }
-    f(doc)
+	var f func(*html.Node)
+	f = func(n *html.Node) {
+		paper, err := extractEpaperHref(n)
+		//TODO: Add error handling
+		if err == nil {
+			re := regexp.MustCompile(`(?m)\d{2}.\d{2}.\d{4}`)
+			date := re.FindString(paper.Name)
+			m[date] = FazPaper{
+				Name: paper.Name,
+				URL:  paper.URL,
+			}
+		}
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
 
-    fmt.Println(m)
+	fmt.Println(m)
 }
 
-func parseEpaperHref(n *html.Node) (FazPaper, error){
-    m := make(map[string]string)
-    fmt.Println("1")
+func extractEpaperHref(n *html.Node) (FazPaper, error) {
+	m := make(map[string]string)
+	fmt.Println("1")
 
-    if n.Type == html.ElementNode && n.Data == "a" {
-    fmt.Println("2")
-        elementPaper := false
-        for _, a := range n.Attr {
-            if a.Key == "track-element" && strings.Contains(a.Val, "E-Paper+FAZ+n/a") {
-    fmt.Println("3")
-                elementPaper = true
-            }
-        }
-        if elementPaper {
-            for _, a := range n.Attr {
-                if a.Key == "track-element" {
-    fmt.Println("4")
-                    fmt.Printf("Key: %s, Value: %s\n", a.Key, a.Val)
-                    m[a.Key] = a.Val
-                }
-                if a.Key == "href" {
-                    fmt.Printf("Key: %s, Value: %s\n", a.Key, a.Val)
-                    m[a.Key] = a.Val
-                }
-            }
-        } else {
-            paper := FazPaper{}
-            return paper, fmt.Errorf("the node does not contain any href to an epaper")
-        }
-    }
+	if n.Type == html.ElementNode && n.Data == "a" {
+		fmt.Println("2")
+		elementPaper := false
+		for _, a := range n.Attr {
+			if a.Key == "track-element" && strings.Contains(a.Val, "E-Paper+FAZ+n/a") {
+				fmt.Println("3")
+				elementPaper = true
+			}
+		}
+		if elementPaper {
+			for _, a := range n.Attr {
+				if a.Key == "track-element" {
+					fmt.Println("4")
+					fmt.Printf("Key: %s, Value: %s\n", a.Key, a.Val)
+					m[a.Key] = a.Val
+				}
+				if a.Key == "href" {
+					fmt.Printf("Key: %s, Value: %s\n", a.Key, a.Val)
+					m[a.Key] = a.Val
+				}
+			}
+		} else {
+			paper := FazPaper{}
+			return paper, fmt.Errorf("the node does not contain any href to an epaper")
+		}
+	}
 
-    paper := FazPaper {
-        Name: m["track-element"],
-        URL: m["href"],
-    }
+	paper := FazPaper{
+		Name: m["track-element"],
+		URL:  m["href"],
+	}
 
-    return paper, nil
+	return paper, nil
 }
