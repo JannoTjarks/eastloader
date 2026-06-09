@@ -8,7 +8,6 @@ import (
 	"net/http/cookiejar"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/spf13/cobra"
 )
@@ -87,8 +86,6 @@ func RunDownloadRoutine(date string, handler visiolink.VisiolinkHandler) {
 		log.Fatal(errFileExists)
 	}
 
-	fmt.Println(issue.PublicationDate)
-
 	loginUrl, err := visiolink.GetLoginUrl(handler)
 	if err != nil {
 		log.Fatal(err)
@@ -114,7 +111,7 @@ func RunDownloadRoutine(date string, handler visiolink.VisiolinkHandler) {
 		visiolink.DownloadIssue(handler, issue.Catalog, accessKey, fileName)
 	})
 
-	fmt.Print("Downloading...")
+	fmt.Printf("The issue dated %s is being downloaded...", issue.PublicationDate)
 	stop := make(chan bool, 1)
 	go printDots(stop)
 

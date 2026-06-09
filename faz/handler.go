@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"strings"
 
+	"log/slog"
+
 	"golang.org/x/net/html"
 )
 
@@ -44,7 +46,7 @@ func Login(handler FazHandler) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("The http status code is \"%s\"\n", resp.Status)
+	slog.Debug("The http status code is \"%s\"\n", resp.Status)
 }
 
 func GetKioskHtml(handler FazHandler) (string, error) {
@@ -55,7 +57,7 @@ func GetKioskHtml(handler FazHandler) (string, error) {
 		log.Fatal(err)
 	}
 
-	fmt.Println(req.URL.String())
+	slog.Debug(req.URL.String())
 
 	resp, err := handler.Client.Do(req)
 	if err != nil {
@@ -63,13 +65,13 @@ func GetKioskHtml(handler FazHandler) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("The http status code is \"%s\"\n", resp.Status)
+	slog.Debug("The http status code is \"%s\"\n", resp.Status)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(string(body))
+	slog.Debug(string(body))
 
 	return string(body), nil
 }
@@ -82,7 +84,7 @@ func GetIssues(handler FazHandler) {
 		log.Fatal(err)
 	}
 
-	fmt.Println(req.URL.String())
+	slog.Debug(req.URL.String())
 
 	resp, err := handler.Client.Do(req)
 	if err != nil {
@@ -90,13 +92,13 @@ func GetIssues(handler FazHandler) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("The http status code is \"%s\"\n", resp.Status)
+	slog.Debug("The http status code is \"%s\"\n", resp.Status)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(string(body))
+	slog.Debug(string(body))
 }
 
 func ParsePaperFromHtmlBody(body string) {

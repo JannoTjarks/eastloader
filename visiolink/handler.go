@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
@@ -60,7 +61,7 @@ func GetSpecificIssue(handler VisiolinkHandler, date string) Catalog {
 	issues := getIssues(handler, year, month)
 
 	publicationDate := t.Format(time.DateOnly)
-	fmt.Printf("Searching the issue from the following date: %s\n", publicationDate)
+	slog.Debug("Searching the issue from the following date: %s\n", publicationDate)
 
 	var specificIssue Catalog
 	for _, issue := range issues {
@@ -92,7 +93,7 @@ func getIssues(handler VisiolinkHandler, year string, month string) []Catalog {
 	q.Add("month", month)
 	req.URL.RawQuery = q.Encode()
 
-	fmt.Println(req.URL.String())
+	slog.Debug(req.URL.String())
 
 	resp, err := handler.Client.Do(req)
 	if err != nil {
@@ -100,13 +101,13 @@ func getIssues(handler VisiolinkHandler, year string, month string) []Catalog {
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("The http status code is \"%s\"\n", resp.Status)
+	slog.Debug("The http status code is \"%s\"\n", resp.Status)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(string(body))
+	slog.Debug(string(body))
 	var issues Content
 	err = json.Unmarshal(body, &issues)
 	if err != nil {
@@ -140,15 +141,15 @@ func GetLoginUrl(handler VisiolinkHandler) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("The http status code is \"%s\"\n", resp.Status)
-	fmt.Printf("The loginUrl is \"%s\"\n", resp.Request.URL.String())
+	slog.Debug("The http status code is \"%s\"\n", resp.Status)
+	slog.Debug("The loginUrl is \"%s\"\n", resp.Request.URL.String())
 	return resp.Request.URL.String(), nil
 }
 
 func ExtractSecretFromLoginUrl(handler VisiolinkHandler, loginUrl string) (string, error) {
 	urlPattern := fmt.Sprintf(regexp.QuoteMeta(fmt.Sprintf("https://%s/titles/%s/%d/publications/", handler.Meta.domain, handler.Meta.customer, handler.Meta.catalogId)) + `(\d*)/\?secret=(.*)`)
 
-	fmt.Println(urlPattern)
+	slog.Debug(urlPattern)
 	re := regexp.MustCompile(urlPattern)
 
 	matches := re.FindStringSubmatch(loginUrl)
@@ -157,9 +158,9 @@ func ExtractSecretFromLoginUrl(handler VisiolinkHandler, loginUrl string) (strin
 	}
 
 	issue := matches[1]
-	fmt.Printf("The extracted issue from the loginUrl is \"%s\"\n", issue)
+	slog.Debug("The extracted issue from the loginUrl is \"%s\"\n", issue)
 	secret := matches[2]
-	fmt.Printf("The extracted secret from the loginUrl is \"%s\"\n", secret)
+	slog.Debug("The extracted secret from the loginUrl is \"%s\"\n", secret)
 
 	return secret, nil
 }
@@ -184,20 +185,20 @@ func GetIssueAccessUrl(handler VisiolinkHandler, secret string, newestIssueId in
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("The http status code is \"%s\"\n", resp.Status)
+	slog.Debug("The http status code is \"%s\"\n", resp.Status)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(string(body))
+	slog.Debug(string(body))
 	var accessUrl TokenResponse
 	err = json.Unmarshal(body, &accessUrl)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Printf("The access_url from the issue is \"%s\"\n", accessUrl.AccessURL)
+	slog.Debug("The access_url from the issue is \"%s\"\n", accessUrl.AccessURL)
 
 	return accessUrl.AccessURL, nil
 }
@@ -216,13 +217,13 @@ func GetIssueAccessKey(handler VisiolinkHandler, accessUrl string) (string, erro
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("The http status code is \"%s\"\n", resp.Status)
+	slog.Debug("The http status code is \"%s\"\n", resp.Status)
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		log.Fatalln(err)
 	}
 
-	fmt.Println(string(body))
+	slog.Debug(string(body))
 	re := regexp.MustCompile(`key4: '(.*)'`)
 
 	matches := re.FindStringSubmatch(string(body))
@@ -232,7 +233,7 @@ func GetIssueAccessKey(handler VisiolinkHandler, accessUrl string) (string, erro
 
 	accessKey := matches[1]
 
-	fmt.Printf("The access_key for the issue is \"%s\"\n", accessKey)
+	slog.Debug("The access_key for the issue is \"%s\"\n", accessKey)
 	return accessKey, nil
 }
 
@@ -252,7 +253,7 @@ func DownloadIssue(handler VisiolinkHandler, issueId int, accessKey string, file
 	q.Add("domain", handler.Meta.readerDomain)
 	req.URL.RawQuery = q.Encode()
 
-	fmt.Println(req.URL.String())
+	slog.Debug(req.URL.String())
 
 	resp, err := handler.Client.Do(req)
 	if err != nil {
@@ -260,7 +261,7 @@ func DownloadIssue(handler VisiolinkHandler, issueId int, accessKey string, file
 	}
 	defer resp.Body.Close()
 
-	fmt.Printf("The http status code is \"%s\"\n", resp.Status)
+	slog.Debug("The http status code is \"%s\"\n", resp.Status)
 
 	out, fileErr := os.Create(fileName)
 	if fileErr != nil {
