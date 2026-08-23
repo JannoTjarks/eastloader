@@ -1,10 +1,10 @@
 module jannotjarks/eastloader
 
-go 1.26.5
+go 1.27.0
 
 require (
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/net v0.57.0
+	golang.org/x/net v0.58.0
 )
 
 require (
